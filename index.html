@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#060B14">
+  <title>CEO核銷工具</title>
+  <meta name="description" content="CEO核銷工具 — 拍照即記帳，AI自動辨識收據">
+  <link rel="manifest" href="./manifest.json">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://apis.google.com/js/api.js" async defer></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+:root {
+  --bg:#060B14; --surface:#0D1520; --surface-2:#131D2E;
+  --glass:rgba(255,255,255,0.035); --border:rgba(255,255,255,0.08); --border-a:rgba(255,255,255,0.18);
+  --primary:#00C9A7; --primary-dim:rgba(0,201,167,0.14); --accent:#4B9AFF;
+  --gradient:linear-gradient(135deg,#00C9A7 0%,#4B9AFF 100%);
+  --text-1:#fff; --text-2:rgba(255,255,255,0.65); --text-3:rgba(255,255,255,0.35);
+  --danger:#FF5E57; --warning:#FFD166; --success:#06D6A0;
+  --r-xs:6px; --r-sm:10px; --r:16px; --r-lg:20px; --r-xl:28px;
+  --nav-h:68px; --sh:0 4px 24px rgba(0,0,0,0.45); --sh-g:0 8px 28px rgba(0,201,167,0.28);
+  --font:'Outfit',system-ui,sans-serif; --ease:cubic-bezier(0.4,0,0.2,1); --bounce:cubic-bezier(0.34,1.56,0.64,1);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;background:var(--bg);color:var(--text-1);font-family:var(--font);font-size:15px;line-height:1.5;overflow:hidden;-webkit-font-smoothing:antialiased;}
+button{font-family:var(--font);cursor:pointer;border:none;outline:none;}
+input{font-family:var(--font);outline:none;}
+a{color:var(--primary);text-decoration:none;}
+#app{width:100%;height:100%;display:flex;flex-direction:column;overflow:hidden;position:relative;}
+#app::before{content:'';position:fixed;top:-200px;left:-100px;width:500px;height:500px;background:radial-gradient(circle,rgba(0,201,167,0.06),transparent 70%);pointer-events:none;z-index:0;}
+#app::after{content:'';position:fixed;bottom:-150px;right:-100px;width:400px;height:400px;background:radial-gradient(circle,rgba(75,154,255,0.05),transparent 70%);pointer-events:none;z-index:0;}
+.nav-bar{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));background:rgba(9,14,24,0.96);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);border-top:1px solid var(--border);display:flex;align-items:flex-start;padding-top:8px;padding-bottom:env(safe-area-inset-bottom,0px);z-index:100;}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;background:none;color:var(--text-3);font-size:10px;font-weight:600;letter-spacing:0.02em;position:relative;transition:all 0.18s var(--ease);}
+.nav-item.active{color:var(--primary);}
+.nav-icon{font-size:22px;transition:transform 0.22s var(--bounce);display:block;}
+.nav-item.active .nav-icon{transform:translateY(-2px) scale(1.12);}
+.nav-dot{position:absolute;bottom:-2px;width:4px;height:4px;border-radius:50%;background:var(--primary);opacity:0;transform:scale(0);transition:all 0.2s var(--bounce);}
+.nav-item.active .nav-dot{opacity:1;transform:scale(1);}
+.views{flex:1;overflow:hidden;position:relative;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px));z-index:1;}
+.view{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px;padding-top:calc(env(safe-area-inset-top,0px) + 20px);transition:opacity 0.22s var(--ease),transform 0.22s var(--ease);opacity:0;pointer-events:none;transform:translateY(14px);}
+.view::-webkit-scrollbar{display:none;}
+.view.active{opacity:1;pointer-events:all;transform:translateY(0);}
+#view-add{padding:0;}
+.gradient-text{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.view-title{font-size:24px;font-weight:800;margin-bottom:20px;padding-top:4px;}
+.section-title{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:var(--r-sm);font-size:15px;font-weight:600;transition:all 0.16s var(--ease);white-space:nowrap;}
+.btn:active{transform:scale(0.96);}
+.btn-primary{background:var(--gradient);color:#040810;box-shadow:var(--sh-g);}
+.btn-secondary{background:var(--surface-2);color:var(--text-1);border:1px solid var(--border);}
+.btn-secondary:active{background:rgba(255,255,255,0.06);}
+.btn-danger{background:rgba(255,94,87,0.12);color:var(--danger);border:1px solid rgba(255,94,87,0.22);}
+.btn-ghost{background:transparent;color:var(--text-2);border:1px solid var(--border);}
+.btn-lg{padding:15px 28px;font-size:16px;border-radius:var(--r);}
+.btn-full{width:100%;}
+.btn-icon{width:40px;height:40px;padding:0;border-radius:50%;font-size:18px;}
+.input-label{display:block;font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:6px;}
+.input{width:100%;padding:12px 14px;background:var(--surface-2);border:1.5px solid var(--border);border-radius:var(--r-sm);color:var(--text-1);font-family:var(--font);font-size:15px;transition:all 0.16s var(--ease);-webkit-appearance:none;appearance:none;}
+.input:focus{border-color:var(--primary);background:rgba(0,201,167,0.04);box-shadow:0 0 0 3px rgba(0,201,167,0.08);}
+.input::placeholder{color:var(--text-3);}
+.input[type="date"]::-webkit-calendar-picker-indicator{filter:invert(1) opacity(0.4);}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+.chip{padding:7px 13px;border-radius:999px;border:1.5px solid var(--border);background:var(--surface-2);color:var(--text-3);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;transition:all 0.15s var(--ease);white-space:nowrap;}
+.chip.selected{border-color:currentColor;background:rgba(255,255,255,0.07);color:var(--text-1);font-weight:600;}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;}
+.badge-p{background:rgba(255,209,102,0.14);color:var(--warning);}
+.badge-d{background:rgba(6,214,160,0.14);color:var(--success);}
+.toggle{position:relative;display:inline-block;width:46px;height:26px;flex-shrink:0;}
+.toggle input{display:none;}
+.toggle-slider{position:absolute;inset:0;background:var(--surface-2);border:1.5px solid var(--border);border-radius:999px;cursor:pointer;transition:all 0.2s var(--ease);}
+.toggle-slider::before{content:'';position:absolute;left:3px;top:50%;transform:translateY(-50%);width:18px;height:18px;background:var(--text-3);border-radius:50%;transition:all 0.2s var(--ease);}
+.toggle input:checked + .toggle-slider{background:rgba(0,201,167,0.18);border-color:var(--primary);}
+.toggle input:checked + .toggle-slider::before{left:calc(100% - 21px);background:var(--primary);}
+#toast{position:fixed;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 14px);left:50%;transform:translateX(-50%) translateY(16px);background:var(--surface-2);border:1px solid var(--border-a);border-radius:var(--r-sm);padding:10px 22px;font-size:14px;font-weight:500;color:var(--text-1);z-index:500;opacity:0;transition:all 0.26s var(--ease);white-space:nowrap;pointer-events:none;backdrop-filter:blur(16px);box-shadow:var(--sh);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.ok{border-color:rgba(6,214,160,0.4);color:var(--success);}
+#toast.er{border-color:rgba(255,94,87,0.4);color:var(--danger);}
+.loader{width:18px;height:18px;border:2px solid rgba(255,255,255,0.15);border-top-color:currentColor;border-radius:50%;animation:spin 0.65s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 24px;text-align:center;gap:10px;}
+.empty-icon{font-size:52px;opacity:0.45;}
+.empty-title{font-size:16px;font-weight:600;color:var(--text-2);}
+.empty-sub{font-size:13px;color:var(--text-3);}
+.fab{position:fixed;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 14px);right:18px;width:54px;height:54px;background:var(--gradient);border:none;border-radius:50%;color:#040810;font-size:26px;display:flex;align-items:center;justify-content:center;box-shadow:var(--sh-g),var(--sh);z-index:90;cursor:pointer;transition:transform 0.2s var(--bounce),box-shadow 0.2s var(--ease);}
+.fab:active{transform:scale(0.91);}
+.home-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;}
+.home-greeting{font-size:12px;color:var(--text-3);margin-bottom:2px;}
+.home-title{font-size:28px;font-weight:800;line-height:1.15;}
+.hero{background:linear-gradient(135deg,rgba(0,201,167,0.08),rgba(75,154,255,0.08));border:1px solid rgba(0,201,167,0.18);border-radius:var(--r-lg);padding:20px;margin-bottom:16px;position:relative;overflow:hidden;}
+.hero::before{content:'';position:absolute;top:-40px;right:-40px;width:140px;height:140px;background:radial-gradient(circle,rgba(0,201,167,0.12),transparent 70%);}
+.hero-lbl{font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.09em;margin-bottom:6px;}
+.hero-amt{font-size:44px;font-weight:800;line-height:1;margin-bottom:6px;letter-spacing:-0.02em;}
+.hero-sub{font-size:13px;color:var(--text-3);}
+.hero-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;}
+.hero-stat{background:rgba(255,255,255,0.05);border-radius:var(--r-sm);padding:10px 12px;}
+.hero-stat-v{font-size:20px;font-weight:800;}
+.hero-stat-l{font-size:11px;color:var(--text-3);margin-top:2px;}
+.cat-scroll{display:flex;gap:10px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px 8px;}
+.cat-scroll::-webkit-scrollbar{display:none;}
+.cat-mini{display:flex;flex-direction:column;align-items:center;gap:5px;min-width:72px;padding:12px 8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r);flex-shrink:0;}
+.cat-mini-icon{font-size:24px;}
+.cat-mini-name{font-size:10px;color:var(--text-2);font-weight:500;text-align:center;line-height:1.25;}
+.cat-mini-amt{font-size:12px;font-weight:700;}
+.sec-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.exp-item{display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.14s;margin:0 -16px;}
+.exp-item:last-child{border-bottom:none;}
+.exp-item:active{background:rgba(255,255,255,0.03);}
+.exp-thumb{width:42px;height:42px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+.exp-info{flex:1;min-width:0;}
+.exp-vendor{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.exp-meta{font-size:11px;color:var(--text-3);margin-top:2px;}
+.exp-right{text-align:right;flex-shrink:0;}
+.exp-amt{font-size:16px;font-weight:800;}
+.add-header{display:flex;align-items:center;gap:12px;padding:16px;padding-top:calc(env(safe-area-inset-top,0px) + 16px);border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(6,11,20,0.96);backdrop-filter:blur(16px);z-index:10;}
+.add-title{flex:1;font-size:18px;font-weight:700;}
+.add-body{padding:16px;}
+.photo-zone{border:2px dashed var(--border);border-radius:var(--r-lg);min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;cursor:pointer;position:relative;overflow:hidden;margin-bottom:14px;transition:all 0.18s var(--ease);}
+.photo-zone:active{border-color:var(--primary);background:var(--primary-dim);}
+.photo-zone.has-photo{border-style:solid;border-color:var(--border-a);min-height:unset;}
+.photo-zone-icon{font-size:38px;opacity:0.45;}
+.photo-zone-text{font-size:15px;font-weight:600;color:var(--text-2);}
+.photo-zone-sub{font-size:12px;color:var(--text-3);}
+.photo-zone.has-photo .photo-zone-icon,.photo-zone.has-photo .photo-zone-text,.photo-zone.has-photo .photo-zone-sub{display:none;}
+#photo-prev{width:100%;max-height:260px;object-fit:contain;display:none;border-radius:calc(var(--r-lg) - 2px);}
+.photo-zone.has-photo #photo-prev{display:block;}
+.photo-retake{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.65);color:#fff;font-size:11px;font-weight:600;padding:4px 10px;border-radius:var(--r-xs);display:none;}
+.photo-zone.has-photo .photo-retake{display:block;}
+.scan-btn{width:100%;padding:14px;margin-bottom:20px;background:linear-gradient(135deg,rgba(0,201,167,0.1),rgba(75,154,255,0.1));border:1.5px solid rgba(0,201,167,0.28);border-radius:var(--r);color:var(--primary);font-family:var(--font);font-size:15px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:10px;transition:all 0.18s var(--ease);cursor:pointer;}
+.scan-btn:disabled{opacity:0.42;cursor:not-allowed;}
+.scan-btn:not(:disabled):active{transform:scale(0.98);}
+@keyframes shimmer{0%,100%{opacity:1}50%{opacity:0.6}}
+.shimmer{animation:shimmer 2s ease-in-out infinite;}
+.filter-bar{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;margin:0 -16px;padding:0 16px 14px;}
+.filter-bar::-webkit-scrollbar{display:none;}
+.filter-chip{padding:6px 14px;border-radius:999px;border:1.5px solid var(--border);background:transparent;color:var(--text-2);font-family:var(--font);font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap;transition:all 0.15s var(--ease);}
+.filter-chip.active{background:var(--primary-dim);border-color:var(--primary);color:var(--primary);}
+.exp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);margin-bottom:10px;overflow:hidden;cursor:pointer;transition:all 0.15s var(--ease);animation:fadeUp 0.2s var(--ease) both;}
+.exp-card:active{transform:scale(0.99);background:var(--surface-2);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.exp-card-inner{display:flex;align-items:center;gap:12px;padding:14px;}
+.exp-card-icon{width:46px;height:46px;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.exp-card-body{flex:1;min-width:0;}
+.exp-card-title{font-size:15px;font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.exp-card-sub{font-size:12px;color:var(--text-3);}
+.exp-card-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex-shrink:0;}
+.exp-card-amt{font-size:18px;font-weight:800;}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:300;display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:opacity 0.22s var(--ease);backdrop-filter:blur(6px);}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal-sheet{width:100%;background:var(--surface);border-radius:var(--r-xl) var(--r-xl) 0 0;border:1px solid var(--border);border-bottom:none;padding:20px;padding-bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform 0.3s cubic-bezier(0.32,0.72,0,1);max-height:88vh;overflow-y:auto;}
+.modal-overlay.open .modal-sheet{transform:translateY(0);}
+.modal-handle{width:36px;height:4px;background:var(--border-a);border-radius:2px;margin:0 auto 18px;}
+.modal-title{font-size:20px;font-weight:800;margin-bottom:16px;}
+.det-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);gap:16px;}
+.det-row:last-of-type{border-bottom:none;}
+.det-key{font-size:13px;color:var(--text-3);white-space:nowrap;}
+.det-val{font-size:14px;font-weight:500;text-align:right;}
+.modal-photo{width:100%;max-height:220px;object-fit:contain;border-radius:var(--r);margin-bottom:16px;border:1px solid var(--border);}
+.modal-acts{display:flex;gap:8px;margin-top:18px;}
+.rpt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+.rpt-stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:14px;}
+.rpt-stat-v{font-size:23px;font-weight:800;margin-bottom:4px;}
+.rpt-stat-l{font-size:11px;color:var(--text-3);}
+.rpt-cat-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);}
+.rpt-cat-row:last-child{border-bottom:none;}
+.rpt-item{display:flex;align-items:center;gap:10px;padding:9px 14px;border-bottom:1px solid var(--border);}
+.rpt-item:last-child{border-bottom:none;}
+.settings-group{margin-bottom:24px;}
+.settings-group-title{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:10px;padding:0 2px;}
+.settings-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px;}
+.settings-hint{font-size:12px;color:var(--text-3);margin-top:8px;line-height:1.5;}
+.api-row{display:flex;gap:8px;}
+.api-row .input{flex:1;font-size:13px;}
+.ig{margin-bottom:14px;}
+@media print{
+  .nav-bar,.fab,#toast,.modal-overlay{display:none !important;}
+  body{background:white;color:black;}
+  .views{padding-bottom:0 !important;}
+  .view{position:static !important;opacity:1 !important;transform:none !important;display:none;}
+  #view-report{display:block !important;pointer-events:all !important;}
+}
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="views">
+    <!-- HOME -->
+    <div class="view active" id="view-home">
+      <div class="home-header">
+        <div>
+          <div class="home-greeting" id="today-str">載入中...</div>
+          <div class="home-title">CEO<span class="gradient-text">核銷工具</span></div>
+        </div>
+        <div style="font-size:30px;opacity:0.6;padding-top:4px">🧾</div>
+      </div>
+      <div class="hero">
+        <div class="hero-lbl">待核銷總額</div>
+        <div class="hero-amt">$<span id="h-total">0</span></div>
+        <div class="hero-sub"><span id="h-count">0</span> 筆費用・<span id="h-pending">0</span> 筆待核銷</div>
+        <div class="hero-stats">
+          <div class="hero-stat"><div class="hero-stat-v gradient-text">$<span id="h-travel">0</span></div><div class="hero-stat-l">差旅費 + 計程車</div></div>
+          <div class="hero-stat"><div class="hero-stat-v" style="color:#C77DFF">$<span id="h-special">0</span></div><div class="hero-stat-l">特別費</div></div>
+        </div>
+      </div>
+      <div class="sec-row" style="margin-top:4px"><div class="section-title">本月類別分布</div></div>
+      <div class="cat-scroll" id="h-cats"><div style="font-size:12px;color:var(--text-3);padding:12px 0">尚無費用</div></div>
+      <div class="sec-row" style="margin-top:18px">
+        <div class="section-title">最近費用</div>
+        <button class="btn btn-ghost" style="padding:5px 12px;font-size:12px" onclick="navigateTo('list')">全部</button>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden" id="h-recent">
+        <div class="empty"><div class="empty-icon">📂</div><div class="empty-title">還沒有費用記錄</div><div class="empty-sub">點擊右下角 + 新增第一筆</div></div>
+      </div>
+    </div>
+
+    <!-- ADD -->
+    <div class="view" id="view-add">
+      <div class="add-header">
+        <button class="btn btn-icon btn-ghost" onclick="navigateTo('home')">←</button>
+        <div class="add-title">新增費用</div>
+        <div style="width:40px"></div>
+      </div>
+      <div class="add-body">
+        <div class="photo-zone" id="photo-zone">
+          <div class="photo-zone-icon">📷</div>
+          <div class="photo-zone-text">選擇收據來源</div>
+          <div class="photo-zone-sub">支援發票、計程車收據、餐飲單、手寫收據等</div>
+          <img id="photo-prev" alt="收據預覽">
+          <div class="photo-retake">點下方按鈕重新選取</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:12px 0 4px">
+          <button class="btn btn-secondary" style="font-size:12px;padding:12px 4px;flex-direction:column;gap:4px" onclick="triggerPhoto('camera')">📷<br>拍照</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:12px 4px;flex-direction:column;gap:4px" onclick="triggerPhoto('gallery')">🖼️<br>從相簿選圖</button>
+          <button class="btn btn-secondary" style="font-size:12px;padding:12px 4px;flex-direction:column;gap:4px" onclick="triggerPhoto('file')">📁<br>上傳檔案</button>
+        </div>
+        <input type="file" id="photo-input-camera" accept="image/*" capture="environment" style="display:none" onchange="onPhoto(event)">
+        <input type="file" id="photo-input-gallery" accept="image/*" style="display:none" onchange="onPhoto(event)">
+        <input type="file" id="photo-input-file" accept="image/*" style="display:none" onchange="onPhoto(event)">
+        <button class="scan-btn" id="scan-btn" disabled onclick="doScan()">
+          <span id="scan-icon" class="shimmer">✨</span>
+          <span id="scan-text">AI 自動辨識欄位</span>
+          <div id="scan-loader" class="loader" style="display:none"></div>
+        </button>
+        <div class="ig"><label class="input-label">費用類別 *</label><div class="chips" id="cat-chips"></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="ig" style="margin:0"><label class="input-label">金額 *</label><input type="number" class="input" id="f-amount" placeholder="0" inputmode="decimal"></div>
+          <div class="ig" style="margin:0"><label class="input-label">日期 *</label><input type="date" class="input" id="f-date"></div>
+        </div>
+        <div style="height:14px"></div>
+        <div id="vendor-group" class="ig"><label class="input-label">購買來源</label><input type="text" class="input" id="f-vendor" placeholder="如：美心餐廳、桂田酒店"></div>
+        <div class="ig"><label class="input-label">名目</label><input type="text" class="input" id="f-note" placeholder="如：業務聯繫餐費、出差台北出席會議"></div>
+        <div id="invoice-group" style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="ig" style="margin:0"><label class="input-label">統一編號 <span style="color:var(--text-3);text-transform:none;font-weight:400">(選填)</span></label><input type="text" class="input" id="f-taxid" placeholder="8碼數字" maxlength="8" inputmode="numeric"></div>
+          <div class="ig" style="margin:0"><label class="input-label">發票號碼 <span style="color:var(--text-3);text-transform:none;font-weight:400">(選填)</span></label><input type="text" class="input" id="f-invoiceno" placeholder="如：ZG-38358028"></div>
+        </div>
+        <div id="cat-extra"></div>
+        <div class="card" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:16px">
+          <div>
+            <div style="font-size:14px;font-weight:600">有紙本收據</div>
+            <div style="font-size:12px;color:var(--text-3);margin-top:2px">紅白包、現金慰勞等請關閉</div>
+          </div>
+          <label class="toggle"><input type="checkbox" id="f-receipt" checked><span class="toggle-slider"></span></label>
+        </div>
+        <button class="btn btn-primary btn-lg btn-full" onclick="saveExp()">💾 儲存費用</button>
+        <div style="height:24px"></div>
+      </div>
+    </div>
+
+    <!-- LIST -->
+    <div class="view" id="view-list">
+      <div class="view-title">費用清單</div>
+      <div class="filter-bar">
+        <button class="filter-chip active" onclick="setFilter(this,'all')">全部</button>
+        <button class="filter-chip" onclick="setFilter(this,'pending')">待核銷</button>
+        <button class="filter-chip" onclick="setFilter(this,'done')">已核銷</button>
+        <button class="filter-chip" onclick="setFilter(this,'差旅費')">差旅費</button>
+        <button class="filter-chip" onclick="setFilter(this,'計程車費')">計程車費</button>
+        <button class="filter-chip" onclick="setFilter(this,'特別費')">特別費</button>
+        <button class="filter-chip" onclick="setFilter(this,'一般事務費')">事務費</button>
+      </div>
+      <div id="list-body"></div>
+    </div>
+
+    <!-- REPORT -->
+    <div class="view" id="view-report">
+      <div class="view-title">核銷報表</div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="section-title" style="margin-bottom:10px">選擇核銷期間</div>
+        <div style="display:flex;gap:10px;margin-bottom:12px">
+          <div style="flex:1"><label class="input-label">開始日期</label><input type="date" class="input" id="rpt-from" onchange="genRpt()"></div>
+          <div style="flex:1"><label class="input-label">結束日期</label><input type="date" class="input" id="rpt-to" onchange="genRpt()"></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="qRange('thisMonth')">本月</button>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="qRange('lastMonth')">上月</button>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="qRange('last60')">近60天</button>
+          <button class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="qRange('all')">全部</button>
+        </div>
+      </div>
+      <div id="rpt-body"><div class="empty"><div class="empty-icon">📊</div><div class="empty-title">請選擇日期範圍</div><div class="empty-sub">選擇後自動產生核銷彙整</div></div></div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="view" id="view-settings">
+      <div class="view-title">設定</div>
+      <div class="settings-group">
+        <div class="settings-group-title">🤖 AI 辨識</div>
+        <div class="settings-card">
+          <div class="input-label" style="margin-bottom:8px">Gemini API Key</div>
+          <div class="api-row">
+            <input type="password" class="input" id="s-key" placeholder="貼上您的 API Key（AIza...）">
+            <button class="btn btn-ghost btn-icon" onclick="toggleKey()" style="border-radius:var(--r-sm)">👁</button>
+          </div>
+          <div class="settings-hint">免費申請：前往 <a href="https://aistudio.google.com/app/apikey" target="_blank">Google AI Studio</a>。Key 僅存於您的手機本機。</div>
+          <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="saveKey()">儲存 API Key</button>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">👤 個人資料</div>
+        <div class="settings-card">
+          <div class="ig"><label class="input-label">姓名</label><input type="text" class="input" id="s-name" placeholder="顯示在報表標頭的姓名"></div>
+          <div class="ig" style="margin-bottom:0"><label class="input-label">單位部門</label><input type="text" class="input" id="s-dept" placeholder="如：業務部"></div>
+          <button class="btn btn-primary btn-full" style="margin-top:12px" onclick="saveProfile()">儲存個人資料</button>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">☁️ Google 雲端硬碟同步</div>
+        <div class="settings-card">
+          <div class="input-label" style="margin-bottom:8px">Google Client ID (雲端硬碟 API)</div>
+          <input type="text" class="input" id="s-gclient" placeholder="輸入您的 OAuth 2.0 用戶端 ID" style="margin-bottom:8px;">
+          <div class="settings-hint" style="margin-bottom:12px">前往 Google Cloud Console 建立憑證。金鑰僅儲存於本機。</div>
+          <div id="gdrive-auth-container" style="margin-bottom:12px;">
+            <button class="btn btn-primary btn-full" onclick="handleAuthClick()">🔑 登入 Google 帳號授權</button>
+          </div>
+          <div id="gdrive-sync-container" style="display:none; margin-bottom:12px;">
+            <div style="font-size:13px; margin-bottom:8px; color:var(--success);">✅ 已連結 Google 帳號</div>
+            <button class="btn btn-secondary btn-full" style="margin-bottom:8px;" onclick="syncToDrive()">☁️ 備份資料至雲端</button>
+            <button class="btn btn-secondary btn-full" style="margin-bottom:8px;" onclick="syncFromDrive()">📥 從雲端還原資料</button>
+            <button class="btn btn-ghost btn-full" onclick="handleSignoutClick()">登出</button>
+          </div>
+        </div>
+      </div>
+      <div class="settings-group">
+        <div class="settings-group-title">📤 資料管理</div>
+        <div class="settings-card">
+          <button class="btn btn-secondary btn-full" style="margin-bottom:8px" onclick="exportAll()">📥 匯出全部資料（CSV）</button>
+          <button class="btn btn-secondary btn-full" style="margin-bottom:8px" onclick="document.getElementById('import-input').click()">📤 匯入歷史資料（JSON）</button>
+          <input type="file" id="import-input" accept="application/json" style="display:none" onchange="onImportFile(event)">
+          <div class="settings-hint" style="margin-bottom:8px">可匯入舊 Excel 核銷資料轉出的 JSON，匯入後預設標記為「已核銷」，仍可在清單勾選改回待核銷。</div>
+          <button class="btn btn-danger btn-full" onclick="clearAll()">🗑️ 清除所有資料</button>
+          <div class="settings-hint">CSV 可直接開啟於 Excel 或匯入 Google Sheets。</div>
+        </div>
+      </div>
+      <div style="text-align:center;font-size:12px;color:var(--text-3);padding:12px 0 28px">CEO核銷工具 v1.1 ✦ 資料儲存於本機裝置</div>
+    </div>
+  </div>
+
+  <nav class="nav-bar">
+    <button class="nav-item active" id="nav-home" onclick="navigateTo('home')"><span class="nav-icon">🏠</span><span>首頁</span><span class="nav-dot"></span></button>
+    <button class="nav-item" id="nav-list" onclick="navigateTo('list')"><span class="nav-icon">📋</span><span>清單</span><span class="nav-dot"></span></button>
+    <button class="nav-item" id="nav-report" onclick="navigateTo('report')"><span class="nav-icon">📊</span><span>報表</span><span class="nav-dot"></span></button>
+    <button class="nav-item" id="nav-settings" onclick="navigateTo('settings')"><span class="nav-icon">⚙️</span><span>設定</span><span class="nav-dot"></span></button>
+  </nav>
+  <button class="fab" id="fab" onclick="navigateTo('add')">＋</button>
+  <div id="toast"></div>
+  <div class="modal-overlay" id="det-modal" onclick="closeModal(event)">
+    <div class="modal-sheet"><div class="modal-handle"></div><div id="modal-body"></div></div>
+  </div>
+</div>
+<script>
+const CATS=[
+  {id:'travel_transport',label:'差旅費／交通費',parent:'差旅費',color:'#4B9AFF',icon:'🚄'},
+  {id:'travel_meal',label:'差旅費／膳雜費',parent:'差旅費',color:'#48CAE4',icon:'🍱'},
+  {id:'taxi',label:'計程車費',parent:'計程車費',color:'#FF9F1C',icon:'🚕'},
+  {id:'special_reward',label:'特別費／員工慰勞',parent:'特別費',color:'#C77DFF',icon:'🎁'},
+  {id:'special_dining',label:'特別費／餐飲',parent:'特別費',color:'#FF6B6B',icon:'🍽️'},
+  {id:'special_red',label:'特別費／紅包',parent:'特別費',color:'#FF4D6D',icon:'🧧'},
+  {id:'special_white',label:'特別費／白包',parent:'特別費',color:'#ADB5BD',icon:'🕯️'},
+  {id:'special_other',label:'特別費／其他',parent:'特別費',color:'#06D6A0',icon:'📦'},
+  {id:'admin',label:'一般事務費',parent:'一般事務費',color:'#61AFEF',icon:'📎'},
+];
+const GP=`請分析這張收據或發票圖片，只回傳JSON（不要其他文字）：
+{"date":"YYYY-MM-DD或null","vendor":"廠商（賣方/開票商家）名稱或null","taxId":"賣方（開票商家）統一編號8碼，注意發票上可能同時印有買方和賣方兩組統編，只要賣方（店家）那組，不要買方（顧客/公司抬頭）那組，或null","invoiceNo":"發票號碼（如ZG-38358028）或null","items":"品項摘要","amount":"總金額數字或null","receiptType":"統一發票/計程車收據/餐飲收據/購物收據/其他"}`;
+const DB_N='ReimburseAI_v1',ST='expenses';
+let db,curView='home',curFilter='all',allExp=[],selCat=null,pB64=null,pMime=null;
+function openDB(){return new Promise((res,rej)=>{const r=indexedDB.open(DB_N,1);r.onupgradeneeded=e=>{const d=e.target.result;if(!d.objectStoreNames.contains(ST)){d.createObjectStore(ST,{keyPath:'id',autoIncrement:true});}};r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function dbGetAll(){return new Promise((res,rej)=>{const r=db.transaction(ST,'readonly').objectStore(ST).getAll();r.onsuccess=()=>res(r.result.sort((a,b)=>(b.date||'').localeCompare(a.date||'')));r.onerror=()=>rej(r.error);});}
+function dbAdd(e){return new Promise((res,rej)=>{const r=db.transaction(ST,'readwrite').objectStore(ST).add(e);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function dbPut(e){return new Promise((res,rej)=>{const r=db.transaction(ST,'readwrite').objectStore(ST).put(e);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+function dbDel(id){return new Promise((res,rej)=>{const r=db.transaction(ST,'readwrite').objectStore(ST).delete(id);r.onsuccess=()=>res();r.onerror=()=>rej(r.error);});}
+function navigateTo(v){document.getElementById('fab').style.display=v==='add'?'none':'flex';document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById('view-'+v).classList.add('active');document.querySelectorAll('.nav-item').forEach(x=>x.classList.remove('active'));const ni=document.getElementById('nav-'+v);if(ni)ni.classList.add('active');curView=v;if(v==='home')refreshHome();if(v==='list')refreshList();if(v==='report')initRpt();if(v==='settings')loadSettings();if(v==='add')initAdd();}
+let toastT;
+function toast(msg,t=''){const el=document.getElementById('toast');el.textContent=msg;el.className='show '+t;clearTimeout(toastT);toastT=setTimeout(()=>el.className='',3000);}
+async function refreshHome(){allExp=await dbGetAll();const now=new Date();const pending=allExp.filter(e=>e.status==='pending');const total=pending.reduce((s,e)=>s+(+e.amount||0),0);const travel=pending.filter(e=>['差旅費','計程車費'].includes(cat(e.categoryId)?.parent)).reduce((s,e)=>s+(+e.amount||0),0);const special=pending.filter(e=>cat(e.categoryId)?.parent==='特別費').reduce((s,e)=>s+(+e.amount||0),0);setText('h-total',fmt(total));setText('h-count',allExp.length);setText('h-pending',pending.length);setText('h-travel',fmt(travel));setText('h-special',fmt(special));const month=allExp.filter(e=>{const d=new Date(e.date+'T00:00:00');return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();});const ct={};month.forEach(e=>{const c=cat(e.categoryId);if(c)ct[c.id]=(ct[c.id]||0)+(+e.amount||0);});const ac=CATS.filter(c=>ct[c.id]>0);document.getElementById('h-cats').innerHTML=ac.length?ac.map(c=>`<div class="cat-mini"><div class="cat-mini-icon">${c.icon}</div><div class="cat-mini-name">${c.label.replace('／','<br>')}</div><div class="cat-mini-amt" style="color:${c.color}">$${fmt(ct[c.id]||0)}</div></div>`).join(''):'<div style="font-size:12px;color:var(--text-3);padding:12px 0">本月尚無費用</div>';const recent=allExp.slice(0,6);document.getElementById('h-recent').innerHTML=recent.length?recent.map(e=>eHTML(e)).join(''):'<div class="empty"><div class="empty-icon">📂</div><div class="empty-title">還沒有費用記錄</div><div class="empty-sub">點擊右下角 + 新增第一筆</div></div>';}
+function eHTML(e){const c=cat(e.categoryId);return`<div class="exp-item" onclick="openDet(${e.id})"><div class="exp-thumb" style="background:${c?.color||'#fff'}18">${c?.icon||'🧾'}</div><div class="exp-info"><div class="exp-vendor">${e.vendor||c?.label||'費用'}</div><div class="exp-meta"><span style="color:${c?.color}">${c?.label||''}</span> · ${fmtD(e.date)}</div></div><div class="exp-right"><div class="exp-amt" style="color:${c?.color}">$${fmt(+e.amount||0)}</div><span class="badge ${e.status==='pending'?'badge-p':'badge-d'}">${e.status==='pending'?'待核銷':'已核銷'}</span></div></div>`;}
+function initAdd(){pB64=null;pMime=null;selCat=null;document.getElementById('photo-zone').classList.remove('has-photo');const p=document.getElementById('photo-prev');p.src='';p.style.display='none';document.getElementById('scan-btn').disabled=true;document.getElementById('scan-icon').style.display='inline';document.getElementById('scan-loader').style.display='none';document.getElementById('scan-text').textContent='AI 自動辨識欄位';['f-amount','f-vendor','f-note','f-taxid','f-invoiceno'].forEach(id=>document.getElementById(id).value='');document.getElementById('f-date').value=todayStr();document.getElementById('f-receipt').checked=true;['photo-input-camera','photo-input-gallery','photo-input-file'].forEach(id=>document.getElementById(id).value='');document.getElementById('cat-extra').innerHTML='';document.getElementById('vendor-group').style.display='none';document.getElementById('invoice-group').style.display='none';document.getElementById('cat-chips').innerHTML=CATS.map(c=>`<div class="chip" data-id="${c.id}" onclick="selC('${c.id}',this)">${c.icon} ${c.label}</div>`).join('');}
+function selC(id,el){selCat=id;document.querySelectorAll('#cat-chips .chip').forEach(c=>c.classList.remove('selected'));el.classList.add('selected');const c=cat(id);if(c){el.style.color=c.color;el.style.borderColor=c.color;}renderExtraFields(id);updateFieldVisibility(id);}
+function fieldVisibilityForCat(id){const c=cat(id);if(!c)return{vendor:false,invoice:false};if(c.parent==='特別費')return{vendor:true,invoice:true};if(c.id==='admin')return{vendor:false,invoice:true};return{vendor:false,invoice:false};}
+function updateFieldVisibility(id){const v=fieldVisibilityForCat(id);document.getElementById('vendor-group').style.display=v.vendor?'':'none';document.getElementById('invoice-group').style.display=v.invoice?'grid':'none';}
+const EXTRA_FIELDS={
+  taxi:[{id:'f-pickuptime',label:'上車時間',type:'time'},{id:'f-plateno',label:'車號',type:'text',ph:'如：TDH7085'}],
+  travel:[{id:'f-route',label:'起訖地點',type:'text',ph:'如：台北-台東'},{id:'f-transportmode',label:'交通方式',type:'select',opts:['飛機及高鐵','火車','汽車及捷運','計程車','其他']},{id:'f-project',label:'經費來源(計畫)',type:'text',ph:'如：115年度行政管理業務-國內差旅費'}],
+  special:[{id:'f-purchasetime',label:'購買時間',type:'time'}],
+};
+function extraFieldsForCat(id){const c=cat(id);if(!c)return[];if(c.id==='taxi')return EXTRA_FIELDS.taxi;if(c.parent==='差旅費')return EXTRA_FIELDS.travel;if(c.parent==='特別費')return EXTRA_FIELDS.special;return[];}
+function renderExtraFields(id){const fields=extraFieldsForCat(id);const el=document.getElementById('cat-extra');if(!fields.length){el.innerHTML='';return;}el.innerHTML=fields.map(f=>{const input=f.type==='select'?`<select class="input" id="${f.id}"><option value="">請選擇</option>${f.opts.map(o=>`<option value="${o}">${o}</option>`).join('')}</select>`:`<input type="${f.type}" class="input" id="${f.id}" placeholder="${f.ph||''}">`;return`<div class="ig"><label class="input-label">${f.label}</label>${input}</div>`;}).join('');}
+function triggerPhoto(src){const id=src==='camera'?'photo-input-camera':src==='gallery'?'photo-input-gallery':'photo-input-file';document.getElementById(id).click();}
+function onPhoto(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=e=>{pB64=e.target.result.split(',')[1];pMime=file.type||'image/jpeg';const p=document.getElementById('photo-prev');p.src=e.target.result;p.style.display='block';document.getElementById('photo-zone').classList.add('has-photo');document.getElementById('scan-btn').disabled=false;};r.readAsDataURL(file);}
+async function doScan(){const apiKey=localStorage.getItem('geminiApiKey');if(!apiKey){toast('請先在設定頁面輸入 Gemini API Key','er');return;}if(!pB64){toast('請先選取收據照片','er');return;}const btn=document.getElementById('scan-btn');btn.disabled=true;document.getElementById('scan-icon').style.display='none';document.getElementById('scan-loader').style.display='block';document.getElementById('scan-text').textContent='辨識中，請稍候...';try{const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.6-flash:generateContent?key=${apiKey}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({contents:[{parts:[{inlineData:{mimeType:pMime,data:pB64}},{text:GP}]}],generationConfig:{temperature:0.05}})});if(!res.ok){const err=await res.json().catch(()=>({}));throw new Error(err.error?.message||`HTTP ${res.status}`);}const data=await res.json();const text=data.candidates?.[0]?.content?.parts?.[0]?.text||'';const m=text.match(/\{[\s\S]*\}/);if(!m)throw new Error('AI 回傳格式錯誤');const r=JSON.parse(m[0]);if(r.date)document.getElementById('f-date').value=r.date;if(r.vendor)document.getElementById('f-vendor').value=r.vendor;if(r.amount!=null)document.getElementById('f-amount').value=r.amount;if(r.taxId)document.getElementById('f-taxid').value=r.taxId;if(r.invoiceNo)document.getElementById('f-invoiceno').value=r.invoiceNo;if(r.items)document.getElementById('f-note').value=r.items;const vendorL=(r.vendor||'').toLowerCase();const isDelivery=['優食','foodpanda','熊貓','uber eats','ubereats'].some(k=>vendorL.includes(k.toLowerCase()));if(r.receiptType==='計程車收據'){const chip=document.querySelector('[data-id="taxi"]');if(chip)selC('taxi',chip);}else if(r.receiptType==='餐飲收據'||isDelivery){const chip=document.querySelector('[data-id="special_dining"]');if(chip)selC('special_dining',chip);}toast(selCat?'✨ 辨識完成！請確認並補充欄位':'✨ 辨識完成！請往上選擇費用類別','ok');}catch(err){console.error(err);toast('辨識失敗：'+err.message,'er');}finally{btn.disabled=false;document.getElementById('scan-icon').style.display='inline';document.getElementById('scan-loader').style.display='none';document.getElementById('scan-text').textContent='AI 自動辨識欄位';}}
+function readExtraFields(){const fields=extraFieldsForCat(selCat);const out={};fields.forEach(f=>{const el=document.getElementById(f.id);if(el&&el.value)out[f.id.slice(2)]=el.value;});return out;}
+async function saveExp(){const amount=document.getElementById('f-amount').value,date=document.getElementById('f-date').value;const missing=[];if(!amount)missing.push('金額');if(!date)missing.push('日期');if(!selCat)missing.push('費用類別');if(missing.length){toast('請填寫：'+missing.join('、'),'er');if(!selCat)document.getElementById('cat-chips').scrollIntoView({behavior:'smooth',block:'center'});return;}const e={categoryId:selCat,date,amount:parseFloat(amount),vendor:document.getElementById('f-vendor').value.trim(),note:document.getElementById('f-note').value.trim(),taxId:document.getElementById('f-taxid').value.trim(),invoiceno:document.getElementById('f-invoiceno').value.trim(),hasReceipt:document.getElementById('f-receipt').checked,status:'pending',photo:pB64,mime:pMime,createdAt:new Date().toISOString(),...readExtraFields()};try{await dbAdd(e);toast('✅ 費用已儲存','ok');navigateTo('home');}catch(err){toast('儲存失敗：'+err.message,'er');}}
+async function refreshList(){allExp=await dbGetAll();renderList();}
+function renderList(){let ex=allExp;if(curFilter==='pending')ex=ex.filter(e=>e.status==='pending');else if(curFilter==='done')ex=ex.filter(e=>e.status==='done');else if(curFilter!=='all')ex=ex.filter(e=>cat(e.categoryId)?.parent===curFilter);const el=document.getElementById('list-body');if(!ex.length){el.innerHTML='<div class="empty"><div class="empty-icon">🔍</div><div class="empty-title">無符合的費用</div><div class="empty-sub">試試其他篩選條件</div></div>';return;}el.innerHTML=ex.map((e,i)=>{const c=cat(e.categoryId);return`<div class="exp-card" style="animation-delay:${Math.min(i,8)*0.03}s" onclick="openDet(${e.id})"><div class="exp-card-inner"><label style="flex-shrink:0;display:flex;align-items:center" onclick="event.stopPropagation()"><input type="checkbox" title="已核銷" style="width:20px;height:20px;accent-color:var(--primary)" ${e.status==='done'?'checked':''} onchange="toggleSt(${e.id})"></label><div class="exp-card-icon" style="background:${c?.color||'#fff'}18">${c?.icon||'🧾'}</div><div class="exp-card-body"><div class="exp-card-title">${e.vendor||c?.label||'費用'}</div><div class="exp-card-sub" style="color:${c?.color}">${c?.label||''}</div><div class="exp-card-sub">${fmtD(e.date)}${e.note?' · '+e.note:''}</div></div><div class="exp-card-right"><div class="exp-card-amt" style="color:${c?.color}">$${fmt(+e.amount||0)}</div><span class="badge ${e.status==='pending'?'badge-p':'badge-d'}">${e.status==='pending'?'待核銷':'已核銷'}</span></div></div></div>`;}).join('');}
+function setFilter(el,f){curFilter=f;document.querySelectorAll('.filter-chip').forEach(c=>c.classList.remove('active'));el.classList.add('active');renderList();}
+async function openDet(id){const e=allExp.find(x=>x.id===id);if(!e)return;const c=cat(e.categoryId);document.getElementById('modal-body').innerHTML=`${e.photo?`<img src="data:${e.mime||'image/jpeg'};base64,${e.photo}" class="modal-photo" alt="收據">`:''}\n  <div class="modal-title">${e.vendor||c?.label||'費用'}</div>\n  <div class="det-row"><span class="det-key">金額</span><span class="det-val" style="font-size:22px;font-weight:800;color:${c?.color}">$${fmt(+e.amount||0)}</span></div>\n  <div class="det-row"><span class="det-key">日期</span><span class="det-val">${e.date}</span></div>\n  <div class="det-row"><span class="det-key">類別</span><span class="det-val">${c?.icon||''} ${c?.label||'-'}</span></div>\n  ${e.note?`<div class="det-row"><span class="det-key">名目</span><span class="det-val">${e.note}</span></div>`:''}\n${e.taxId?`<div class="det-row"><span class="det-key">統一編號</span><span class="det-val" style="font-family:monospace">${e.taxId}</span></div>`:''}\n  ${e.invoiceno?`<div class="det-row"><span class="det-key">發票號碼</span><span class="det-val" style="font-family:monospace">${e.invoiceno}</span></div>`:''}\n  ${e.pickuptime?`<div class="det-row"><span class="det-key">上車時間</span><span class="det-val">${e.pickuptime}</span></div>`:''}\n  ${e.plateno?`<div class="det-row"><span class="det-key">車號</span><span class="det-val">${e.plateno}</span></div>`:''}\n  ${e.purchasetime?`<div class="det-row"><span class="det-key">購買時間</span><span class="det-val">${e.purchasetime}</span></div>`:''}\n  ${e.route?`<div class="det-row"><span class="det-key">起訖地點</span><span class="det-val">${e.route}</span></div>`:''}\n  ${e.transportmode?`<div class="det-row"><span class="det-key">交通方式</span><span class="det-val">${e.transportmode}</span></div>`:''}\n  ${e.project?`<div class="det-row"><span class="det-key">經費來源</span><span class="det-val">${e.project}</span></div>`:''}\n  <div class="det-row"><span class="det-key">收據</span><span class="det-val">${e.hasReceipt?'✅ 有收據':'⚠️ 無收據'}</span></div>\n  <div class="det-row"><span class="det-key">狀態</span><span class="det-val"><span class="badge ${e.status==='pending'?'badge-p':'badge-d'}">${e.status==='pending'?'待核銷':'已核銷'}</span></span></div>\n  <div class="modal-acts">${e.status==='pending'?`<button class="btn btn-primary" style="flex:1" onclick="toggleSt(${e.id})">✅ 標記已核銷</button>`:`<button class="btn btn-secondary" style="flex:1" onclick="toggleSt(${e.id})">↩️ 取消核銷</button>`}<button class="btn btn-danger" style="flex:1" onclick="confirmDel(${e.id})">🗑️ 刪除</button></div>`;document.getElementById('det-modal').classList.add('open');}
+function closeModal(e){if(e.target===document.getElementById('det-modal'))document.getElementById('det-modal').classList.remove('open');}
+async function toggleSt(id){const e=allExp.find(x=>x.id===id);if(!e)return;e.status=e.status==='pending'?'done':'pending';await dbPut(e);document.getElementById('det-modal').classList.remove('open');toast(e.status==='done'?'✅ 已標記核銷完成':'↩️ 已取消核銷','ok');allExp=await dbGetAll();if(curView==='home')refreshHome();if(curView==='list')renderList();}
+async function confirmDel(id){if(!confirm('確定刪除這筆費用？'))return;await dbDel(id);document.getElementById('det-modal').classList.remove('open');toast('已刪除');allExp=await dbGetAll();if(curView==='home')refreshHome();if(curView==='list')renderList();}
+function initRpt(){const now=new Date(),from=new Date(now.getFullYear(),now.getMonth(),1);document.getElementById('rpt-from').value=dStr(from);document.getElementById('rpt-to').value=todayStr();genRpt();}
+function qRange(r){const now=new Date();let from,to=now;if(r==='thisMonth'){from=new Date(now.getFullYear(),now.getMonth(),1);}else if(r==='lastMonth'){from=new Date(now.getFullYear(),now.getMonth()-1,1);to=new Date(now.getFullYear(),now.getMonth(),0);}else if(r==='last60'){from=new Date(now.getTime()-60*864e5);}else{from=new Date(2020,0,1);}document.getElementById('rpt-from').value=dStr(from);document.getElementById('rpt-to').value=dStr(to);genRpt();}
+async function genRpt(){const fv=document.getElementById('rpt-from').value,tv=document.getElementById('rpt-to').value;if(!fv||!tv)return;allExp=await dbGetAll();const from=new Date(fv+'T00:00:00'),to=new Date(tv+'T23:59:59');const data=allExp.filter(e=>{const d=new Date(e.date+'T00:00:00');return d>=from&&d<=to;});const el=document.getElementById('rpt-body');if(!data.length){el.innerHTML='<div class="empty"><div class="empty-icon">📭</div><div class="empty-title">此期間無費用記錄</div></div>';return;}const total=data.reduce((s,e)=>s+(+e.amount||0),0);const pTotal=data.filter(e=>e.status==='pending').reduce((s,e)=>s+(+e.amount||0),0);const pCount=data.filter(e=>e.status==='pending').length;const pm={};data.forEach(e=>{const c=cat(e.categoryId),k=c?.parent||'其他';if(!pm[k])pm[k]={total:0,count:0,color:c?.color||'#fff'};pm[k].total+=(+e.amount||0);pm[k].count++;pm[k].color=c?.color||'#fff';});const uN=localStorage.getItem('userName')||'',uD=localStorage.getItem('userDept')||'';el.innerHTML=`<div class="card" style="background:linear-gradient(135deg,rgba(0,201,167,.08),rgba(75,154,255,.08));border-color:rgba(0,201,167,.22);margin-bottom:14px"><div style="font-size:12px;color:var(--text-3);margin-bottom:4px">核銷費用申請彙整</div>${uN?`<div style="font-size:15px;font-weight:700">${uN}${uD?' ・ '+uD:''}</div>`:''}<div style="font-size:12px;color:var(--text-3);margin-top:2px">核銷期間：${fv} 至 ${tv}</div></div><div class="rpt-grid"><div class="rpt-stat"><div class="rpt-stat-v gradient-text">$${fmt(total)}</div><div class="rpt-stat-l">合計金額</div></div><div class="rpt-stat"><div class="rpt-stat-v" style="color:var(--warning)">$${fmt(pTotal)}</div><div class="rpt-stat-l">待核銷金額</div></div><div class="rpt-stat"><div class="rpt-stat-v">${data.length}</div><div class="rpt-stat-l">費用筆數</div></div><div class="rpt-stat"><div class="rpt-stat-v" style="color:var(--warning)">${pCount}</div><div class="rpt-stat-l">待核銷筆數</div></div></div><div class="section-title" style="margin-bottom:10px">主類別彙整</div><div class="card" style="margin-bottom:14px">${Object.entries(pm).map(([n,d])=>`<div class="rpt-cat-row"><div style="display:flex;align-items:center;gap:10px"><div style="width:8px;height:8px;border-radius:50%;background:${d.color};flex-shrink:0"></div><div><div style="font-size:14px;font-weight:500">${n}</div><div style="font-size:11px;color:var(--text-3)">${d.count} 筆</div></div></div><div style="font-size:15px;font-weight:700;color:${d.color}">$${fmt(d.total)}</div></div>`).join('')}</div><div class="section-title" style="margin-bottom:10px">費用明細</div><div class="card" style="padding:0;overflow:hidden;margin-bottom:14px">${data.map((e,i)=>{const c=cat(e.categoryId);return`<div class="rpt-item" style="${i<data.length-1?'border-bottom:1px solid var(--border)':''}"><div style="width:6px;height:6px;border-radius:50%;background:${c?.color};flex-shrink:0"></div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${e.vendor||c?.label||'-'}</div><div style="font-size:11px;color:var(--text-3)">${e.date} · ${c?.label||'-'}${e.note?' · '+e.note:''}</div></div><div style="text-align:right;flex-shrink:0"><div style="font-size:13px;font-weight:700;color:${c?.color}">$${fmt(+e.amount||0)}</div><span class="badge ${e.status==='pending'?'badge-p':'badge-d'}" style="font-size:10px">${e.status==='pending'?'待':'✓'}</span></div></div>`;}).join('')}</div><div style="display:flex;gap:8px;margin-bottom:28px"><button class="btn btn-primary" style="flex:1" onclick="exportCSV('${fv}','${tv}')">📥 匯出 CSV</button><button class="btn btn-secondary" style="flex:1" onclick="window.print()">🖨️ 列印</button></div>`;}
+async function exportCSV(fv,tv){allExp=await dbGetAll();let data=allExp;if(fv&&tv){const from=new Date(fv+'T00:00:00'),to=new Date(tv+'T23:59:59');data=allExp.filter(e=>{const d=new Date(e.date+'T00:00:00');return d>=from&&d<=to;});}const hdr=['日期','主類別','細項類別','廠商','名目','金額','統一編號','發票號碼','上車時間','車號','購買時間','起訖地點','交通方式','經費來源(計畫)','有無收據','核銷狀態'];const rows=data.map(e=>{const c=cat(e.categoryId);return[e.date,c?.parent||'',c?.label||'',e.vendor||'',e.note||'',e.amount||0,e.taxId||'',e.invoiceno||'',e.pickuptime||'',e.plateno||'',e.purchasetime||'',e.route||'',e.transportmode||'',e.project||'',e.hasReceipt?'有':'無',e.status==='pending'?'待核銷':'已核銷'];});const csv=[hdr,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`核銷報表_${fv||'all'}_${tv||'all'}.csv`;document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);toast('✅ CSV 已下載','ok');}
+async function exportAll(){await exportCSV(null,null);}
+function onImportFile(ev){const file=ev.target.files[0];if(!file)return;const r=new FileReader();r.onload=async e=>{try{const arr=JSON.parse(e.target.result);if(!Array.isArray(arr))throw new Error('檔案格式錯誤：需為JSON陣列');let ok=0,fail=0;for(const rec of arr){try{const clean={categoryId:rec.categoryId,date:rec.date||'',amount:parseFloat(rec.amount)||0,vendor:rec.vendor||'',note:rec.note||'',taxId:rec.taxId||'',invoiceno:rec.invoiceno||'',hasReceipt:rec.hasReceipt!==false,status:rec.status||'done',photo:rec.photo||null,mime:rec.mime||null,createdAt:rec.createdAt||new Date().toISOString()};['pickuptime','plateno','purchasetime','route','transportmode','project'].forEach(k=>{if(rec[k])clean[k]=rec[k];});if(!clean.categoryId||!clean.date){fail++;continue;}await dbAdd(clean);ok++;}catch(err){fail++;}}toast(`✅ 已匯入 ${ok} 筆${fail?`，${fail} 筆失敗`:''}`,'ok');document.getElementById('import-input').value='';allExp=await dbGetAll();if(curView==='home')refreshHome();if(curView==='list')renderList();}catch(err){toast('匯入失敗：'+err.message,'er');}};r.readAsText(file);}
+function loadSettings(){document.getElementById('s-key').value=localStorage.getItem('geminiApiKey')||'';document.getElementById('s-name').value=localStorage.getItem('userName')||'';document.getElementById('s-dept').value=localStorage.getItem('userDept')||'';document.getElementById('s-gclient').value=localStorage.getItem('gdriveClientId')||'';}
+function saveKey(){const k=document.getElementById('s-key').value.trim();if(!k){toast('請輸入 API Key','er');return;}localStorage.setItem('geminiApiKey',k);toast('✅ API Key 已儲存','ok');}
+function saveProfile(){localStorage.setItem('userName',document.getElementById('s-name').value.trim());localStorage.setItem('userDept',document.getElementById('s-dept').value.trim());toast('✅ 個人資料已儲存','ok');}
+document.getElementById('s-gclient').addEventListener('change', (e) => { localStorage.setItem('gdriveClientId', e.target.value.trim()); if(window.initGapi) window.initGapi(); });
+function toggleKey(){const i=document.getElementById('s-key');i.type=i.type==='password'?'text':'password';}
+function clearAll(){if(!confirm('確定清除所有費用資料？此操作無法復原。'))return;const r=indexedDB.deleteDatabase(DB_N);r.onsuccess=()=>{toast('已清除所有資料');setTimeout(()=>location.reload(),1200);};}
+function cat(id){return CATS.find(c=>c.id===id);}
+function fmt(n){return Math.round(n).toLocaleString();}
+function todayStr(){return dStr(new Date());}
+function dStr(d){return d.toISOString().slice(0,10);}
+function fmtD(s){if(!s)return'';const d=new Date(s+'T00:00:00');return`${d.getMonth()+1}/${d.getDate()}`;}
+function setText(id,v){const e=document.getElementById(id);if(e)e.textContent=v;}
+async function init(){const now=new Date();setText('today-str',`${now.getFullYear()}年 ${now.getMonth()+1}月${now.getDate()}日`);db=await openDB();await refreshHome();if(!localStorage.getItem('geminiApiKey'))setTimeout(()=>toast('💡 提示：前往設定頁輸入 Gemini API Key 以啟用 AI 辨識'),1500);}
+init();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => {
+      console.error('ServiceWorker 註冊失敗: ', err);
+    });
+  });
+}
+</script>
+<script src="./gdrive.js"></script>
+</body>
+</html>

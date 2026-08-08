@@ -1,0 +1,21 @@
+{
+  "name": "CEO核銷工具",
+  "short_name": "核銷工具",
+  "description": "CEO核銷工具 — 拍照即記帳，AI自動辨識收據",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#060B14",
+  "theme_color": "#060B14",
+  "icons": [
+    {
+      "src": "./icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
