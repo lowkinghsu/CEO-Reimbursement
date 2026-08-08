@@ -44,7 +44,7 @@ a{color:var(--primary);text-decoration:none;}
 .view{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:20px 16px;padding-top:calc(env(safe-area-inset-top,0px) + 20px);padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 60px);transition:opacity 0.22s var(--ease),transform 0.22s var(--ease);opacity:0;pointer-events:none;transform:translateY(14px);}
 .view::-webkit-scrollbar{display:none;}
 .view.active{opacity:1;pointer-events:all;transform:translateY(0);}
-#view-add{padding:0;}
+#view-add{padding:0;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 100px) !important;}
 .gradient-text{background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .view-title{font-size:24px;font-weight:800;margin-bottom:20px;padding-top:4px;}
 .section-title{font-size:11px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;}
@@ -118,7 +118,7 @@ a{color:var(--primary);text-decoration:none;}
 .exp-amt{font-size:16px;font-weight:800;}
 .add-header{display:flex;align-items:center;gap:12px;padding:16px;padding-top:calc(env(safe-area-inset-top,0px) + 16px);border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(6,11,20,0.96);backdrop-filter:blur(16px);z-index:10;}
 .add-title{flex:1;font-size:18px;font-weight:700;}
-.add-body{padding:16px;padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom,0px) + 80px);}
+.add-body{padding:16px;padding-bottom:120px;}
 .photo-zone{border:2px dashed var(--border);border-radius:var(--r-lg);min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;cursor:pointer;position:relative;overflow:hidden;margin-bottom:14px;transition:all 0.18s var(--ease);}
 .photo-zone:active{border-color:var(--primary);background:var(--primary-dim);}
 .photo-zone.has-photo{border-style:solid;border-color:var(--border-a);min-height:unset;}
@@ -266,7 +266,7 @@ a{color:var(--primary);text-decoration:none;}
           <label class="toggle"><input type="checkbox" id="f-receipt" checked><span class="toggle-slider"></span></label>
         </div>
         <button class="btn btn-primary btn-lg btn-full" onclick="saveExp()">💾 儲存費用</button>
-        <div style="height:24px"></div>
+        <div style="height:140px;clear:both;"></div>
       </div>
     </div>
 
@@ -355,7 +355,7 @@ a{color:var(--primary);text-decoration:none;}
           <div class="settings-hint">CSV 可直接開啟於 Excel 或匯入 Google Sheets。</div>
         </div>
       </div>
-      <div style="text-align:center;font-size:12px;color:var(--text-3);padding:12px 0 28px">CEO核銷工具 v1.1 ✦ 資料儲存於本機裝置</div>
+      <div style="text-align:center;font-size:12px;color:var(--text-3);padding:12px 0 28px">CEO核銷工具 v1.2 ✦ 資料儲存於本機裝置</div>
     </div>
   </div>
 
