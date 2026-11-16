@@ -1,7 +1,9 @@
-const CACHE_NAME = 'reimbursement-ai-v2';
+const CACHE_NAME = 'reimbursement-ai-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
+  './gdrive.js',
+  './xlsx.full.min.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
@@ -34,6 +36,21 @@ self.addEventListener('fetch', (event) => {
   // 對於 API 請求或外部資源（除了 Google Fonts 外），盡量優先使用網路
   if (event.request.url.includes('generativelanguage.googleapis.com') || event.request.url.includes('apis.google.com')) {
     return; // 不要快取 API 請求
+  }
+
+  // 主頁面與程式：有網路時一律抓最新版，離線才用快取（避免改版後手機還停在舊版）
+  const u = new URL(event.request.url);
+  if (event.request.method === 'GET' && u.origin === self.location.origin && (event.request.mode === 'navigate' || /\.(html|js)$/.test(u.pathname))) {
+    event.respondWith(
+      fetch(event.request).then((resp) => {
+        if (resp && resp.status === 200) {
+          const copy = resp.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        }
+        return resp;
+      }).catch(() => caches.match(event.request).then((r) => r || caches.match('./index.html')))
+    );
+    return;
   }
 
   event.respondWith(
