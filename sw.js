@@ -1,9 +1,10 @@
-const CACHE_NAME = 'reimbursement-ai-v3';
+const CACHE_NAME = 'reimbursement-ai-v4';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './gdrive.js',
   './xlsx.full.min.js',
+  './jszip.min.js',
   './manifest.json',
   './icon-192.png',
   './icon-512.png',
